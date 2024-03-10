@@ -32,9 +32,10 @@ function questionList() {
       const choice = response.mainQuestion;
       console.log(choice);
       switch (choice) {
-        case "View All Employees":
-          console.log("You chose to view all employees.");
-          viewEmployees();
+        case "View All Employees": //completed and working
+          viewEmployees().then(() => {
+            questionList();
+          });
           //questionList();
           break;
         case "Add Employee":
@@ -99,27 +100,25 @@ function questionList() {
               console.log(
                 `You have added ${response.newFirstName} ${response.newLastName} to the database.`
               );
-            })
-            .then(() => {
-              questionList();
             });
           break;
         case "Update Employee Role":
           console.log("You chose to update employee role.");
           questionList();
           break;
-        case "View All Roles":
-          console.log("You chose to view all roles.");
-          questionList();
+        case "View All Roles": //completed and working
+          viewRoles().then(() => {
+            questionList();
+          });
           break;
         case "Add Role":
           console.log("You chose to add a role.");
           questionList();
           break;
-        case "View All Departments":
-          console.log("You chose to view all departments.");
-          viewDepartments();
-          questionList();
+        case "View All Departments": //completed and working
+          viewDepartments().then(() => {
+            questionList();
+          });
           break;
         case "Add Department":
           console.log("You chose to add a department.");
@@ -136,17 +135,32 @@ function questionList() {
 
 //when the user chooses to view a list of employees
 function viewEmployees() {
-  let employee_list = `SELECT id, CONCAT(first_name, ' ', last_name) AS name FROM employee;`;
-  db.query(employee_list, (err, result) => {
-    console.log(result[0].id, result[0].name);
+  let employee_list = `SELECT id AS 'employee id', CONCAT(first_name, ' ', last_name) AS 'employee name' FROM employee;`;
+  return new Promise((resolve) => {
+    db.query(employee_list, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
   });
 }
 
 function viewDepartments() {
   let department_list = `SELECT id AS dept, name AS department_name FROM department`;
-  db.query(department_list, (err, result) => {
-    console.table("\n\n\nYou are viewing all departments.", result, "\n\n");
-    questionList();
+  return new Promise((resolve) => {
+    db.query(department_list, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
+
+function viewRoles() {
+  let role_list = `SELECT title, salary FROM role`;
+  return new Promise((resolve) => {
+    db.query(role_list, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
   });
 }
 
