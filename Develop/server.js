@@ -113,7 +113,9 @@ function questionList() {
           break;
         case "Add Role":
           console.log("You chose to add a role.");
-          questionList();
+          addRole().then(() => {
+            questionList();
+          });
           break;
         case "View All Departments": //completed and working
           viewDepartments().then(() => {
@@ -162,6 +164,80 @@ function viewRoles() {
       resolve(questionList);
     });
   });
+}
+
+function addRole() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the name of the new role? \n",
+        },
+        {
+          type: "input",
+          name: "salary",
+          message: "What is the salary of this position? \n",
+        },
+        {
+          type: "list",
+          name: "department",
+          message: "What department does this position belong to? \n",
+          choices: getDepartmentList(),
+        },
+        {
+          type: "list",
+          name: "is_manager",
+          message: "Is this position a manager? \n",
+          choices: ["yes", "no"],
+        },
+      ])
+      .then((response) => {
+        let dep;
+        let sql1 = `SELECT id AS id FROM department WHERE name = '${response.department}'`;
+        console.log(sql1);
+        db.query(sql1, (err, result) => {
+          console.log(result[0].id);
+          dep = result[0].id;
+          let yesManager;
+          if (response.is_manager === "yes") {
+            yesManager = 1;
+          } else {
+            yesManager = 0;
+          }
+
+          let sql = `INSERT INTO role (title, salary, department_id, is_manager) VALUES (?,?,?,?)`;
+          let params = [response.title, response.salary, dep, yesManager];
+          console.log(params);
+          db.query(sql, params, (err, result) => {
+            console.log(
+              `You have added ${response.title} to the database.\n\n`
+            );
+            resolve(questionList);
+          });
+        });
+      });
+  });
+}
+
+function getDepartmentList() {
+  //count the number of departments
+  let deptNum;
+  const deptList = `SELECT COUNT(*) AS total FROM department`;
+  db.query(deptList, (err, result) => {
+    deptNum = result[0].total;
+  });
+  //create an empty list
+  let deptListNames = [];
+  //use a loop to iterate through each department and add it to a list
+
+  db.query(`SELECT name AS dept FROM department`, (err, result) => {
+    for (let i = 0; i < deptNum; i++) {
+      deptListNames.push(result[i].dept);
+    }
+  });
+  return deptListNames;
 }
 
 questionList();
