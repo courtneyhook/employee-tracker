@@ -123,8 +123,9 @@ function questionList() {
           });
           break;
         case "Add Department":
-          console.log("You chose to add a department.");
-          questionList();
+          addDepartment().then(() => {
+            questionList();
+          });
           break;
         case "Quit":
           //ends the connection
@@ -238,6 +239,29 @@ function getDepartmentList() {
     }
   });
   return deptListNames;
+}
+
+function addDepartment() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the name of the new department? \n",
+        },
+      ])
+
+      .then((response) => {
+        let newDept = response.title;
+        console.log(newDept);
+        let sqldep = `INSERT INTO department (name) VALUES (?)`;
+        db.query(sqldep, [newDept], (err, result) => {
+          console.log(`You have added ${response.title} to the database.\n\n`);
+          resolve(questionList);
+        });
+      });
+  });
 }
 
 questionList();
