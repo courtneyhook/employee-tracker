@@ -1,5 +1,9 @@
 const inquirer = require("inquirer");
 const db = require("./config/connection.js");
+<<<<<<< HEAD
+=======
+const cTable = require("console.table");
+>>>>>>> e7bba204df5d0498aa8c746632a9252732972afb
 
 function questionList() {
   inquirer
@@ -24,8 +28,8 @@ function questionList() {
       const choice = response.mainQuestion;
       console.log(choice);
       switch (choice) {
-        case "View All Employees": //completed and working
-          viewEmployees().then(() => {
+        case "View All Employees":
+          getEmployeeList().then(() => {
             questionList();
           });
           break;
@@ -73,6 +77,7 @@ function questionList() {
 
 //when the user chooses to view a list of employees
 async function viewEmployees() {
+<<<<<<< HEAD
   const empListQuery = `SELECT CONCAT(first_name, ' ', last_name) AS name, id FROM employee`;
   const empListNames = await db.query(empListQuery);
   console.log(empListNames);
@@ -82,6 +87,16 @@ async function viewEmployees() {
   // }));
   // return empListResult.forEach((name) => console.log(name.name));
   // //return empListResult;
+=======
+  const empList = `SELECT CONCAT(first_name, ' ', last_name) AS name, id FROM employee`;
+  const employee_list = await db.query(empList);
+
+  const result = employee_list[0].map((employee) => ({
+    name: employee.name,
+    value: employee.id,
+  }));
+  return result;
+>>>>>>> e7bba204df5d0498aa8c746632a9252732972afb
 }
 
 function viewDepartments() {
