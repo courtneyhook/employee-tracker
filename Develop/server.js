@@ -1,13 +1,5 @@
 const inquirer = require("inquirer");
-const mysql = require("mysql2");
-const cTable = require("console.table");
-
-const db = mysql.createConnection({
-  host: "localHost",
-  user: "root",
-  password: "Jasmine07!",
-  database: "company_db",
-});
+const db = require("./config/connection.js");
 
 function questionList() {
   inquirer
@@ -15,7 +7,7 @@ function questionList() {
       {
         type: "list",
         name: "mainQuestion",
-        message: "What would you like to do?",
+        message: "\n\nWhat would you like to do?",
         choices: [
           "View All Employees",
           "Add Employee",
@@ -80,14 +72,16 @@ function questionList() {
 }
 
 //when the user chooses to view a list of employees
-function viewEmployees() {
-  let employee_list = `SELECT id AS 'employee id', CONCAT(first_name, ' ', last_name) AS 'employee name' FROM employee;`;
-  return new Promise((resolve) => {
-    db.query(employee_list, (err, result) => {
-      console.table("\n\n", result, "\n\n");
-      resolve(questionList);
-    });
-  });
+async function viewEmployees() {
+  const empListQuery = `SELECT CONCAT(first_name, ' ', last_name) AS name, id FROM employee`;
+  const empListNames = await db.query(empListQuery);
+  console.log(empListNames);
+  // const empListResult = empListNames[0].map((employee) => ({
+  //   name: employee.name,
+  //   value: employee.id,
+  // }));
+  // return empListResult.forEach((name) => console.log(name.name));
+  // //return empListResult;
 }
 
 function viewDepartments() {
@@ -184,23 +178,18 @@ function getDepartmentList() {
   return deptListNames;
 }
 
-function getRoleList() {
+async function getRoleList() {
   //count the number of departments
-  let roleNum;
-  const roleList = `SELECT COUNT(*) AS total FROM role`;
-  db.query(roleList, (err, result) => {
-    roleNum = result[0].total;
-  });
-  //create an empty list
-  let roleListNames = [];
-  //use a loop to iterate through each department and add it to a list
+  const roleList = `SELECT id, title, department_id, is_manager FROM role`;
+  const roleListQuery = await db.query(roleList);
 
-  db.query(`SELECT title AS role FROM role`, (err, result) => {
-    for (let i = 0; i < roleNum; i++) {
-      roleListNames.push(result[i].role);
-    }
-  });
-  return roleListNames;
+  const roleListResults = roleListQuery[0].map((employee) => ({
+    id: employee.id,
+    name: employee.title,
+    dept_id: employee.department_id,
+    is_manager: employee.is_manager,
+  }));
+  return roleListResults;
 }
 
 function addDepartment() {
@@ -226,26 +215,20 @@ function addDepartment() {
   });
 }
 
-function getManagerList() {
-  let num;
-  db.query(
-    `SELECT COUNT(*) AS total FROM employee LEFT JOIN role ON employee.role_id=role.id WHERE role.is_manager=1;`,
-    (err, result) => {
-      num = result[0].total;
-    }
-  );
-  let manListNames = [];
-  const isManagerTrue = `SELECT CONCAT(first_name, ' ', last_name) AS name, role_id FROM employee LEFT JOIN role ON employee.role_id=role.id WHERE role.is_manager=1`;
-  db.query(isManagerTrue, (err, result) => {
-    for (let z = 0; z < num; z++) {
-      manListNames.push(result[z].name);
-    }
-  });
-  return manListNames;
+async function getManagerList() {
+  const manList = `SELECT CONCAT(first_name, ' ', last_name) AS name, role_id FROM employee LEFT JOIN role ON employee.role_id=role.id WHERE role.is_manager=1`;
+
+  const manListNames = await db.query(manList);
+
+  const manListResults = manListNames[0].map((employees) => ({
+    name: employees.name,
+    role_id: employees.role_id,
+  }));
+  return manListResults;
 }
 
 function addEmployee() {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     inquirer
       .prompt([
         {
@@ -262,7 +245,7 @@ function addEmployee() {
           type: "list",
           name: "newRole",
           message: "What is the employee's role?",
-          choices: getRoleList(),
+          choices: await getRoleList(),
         },
         {
           type: "list",
@@ -297,46 +280,50 @@ function addEmployee() {
   });
 }
 
-function getEmployeeList() {
-  return new Promise((resolve) => {
-    let employeeNum;
-    const employeeList = `SELECT COUNT(*) AS total FROM employee`;
-    db.query(employeeList, (err, result) => {
-      employeeNum = result[0].total;
-    });
-    //create an empty list
-    let employeeListNames = [];
-    //use a loop to iterate through each department and add it to a list
+async function getEmployeeList() {
+  const empNameQuery = `SELECT CONCAT(first_name, ' ', last_name) AS name, id FROM employee`;
+  const empListNames = await db.query(empNameQuery);
 
-    db.query(
-      `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employee`,
-      (err, result) => {
-        for (let e = 0; e < employeeNum; e++) {
-          employeeListNames.push(result[e].name);
-        }
-        console.log(employeeListNames);
-        return employeeListNames;
-      }
-    );
-  });
+  const result = empListNames[0].map((employee) => ({
+    name: employee.name,
+    value: employee.id,
+  }));
+  return result;
 }
 
 function updateRole() {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve, reject) => {
     inquirer
       .prompt([
         {
           type: "list",
           name: "employee",
-          message: "Select the employee name you would like to update. \n",
-          choices: getEmployeeList(),
+          message: "Select the employee name you would like to update.\n\n",
+          choices: await getEmployeeList(),
+        },
+        {
+          type: "list",
+          name: "newRole",
+          message: "What is the employee's new role?\n\n",
+          choices: await getRoleList(),
+        },
+        {
+          type: "list",
+          name: "newSupervisor",
+          message: "Who is the employee's manager?\n\n",
+          choices: await getManagerList(),
         },
       ])
       .then((response) => {
         console.log(response.employee);
+        resolve(questionList);
+      })
+      .catch((err) => {
+        console.log(err);
+        reject(err);
       });
-    resolve(questionList);
   });
 }
 
-questionList();
+//questionList();
+viewEmployees();
