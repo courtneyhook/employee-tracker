@@ -1,6 +1,6 @@
 const inquirer = require("inquirer");
-const cTable = require("console.table");
 const mysql = require("mysql2");
+const cTable = require("console.table");
 
 const db = mysql.createConnection({
   host: "localHost",
@@ -15,7 +15,7 @@ function questionList() {
       {
         type: "list",
         name: "mainQuestion",
-        message: "\n\nWhat would you like to do?",
+        message: "What would you like to do?",
         choices: [
           "View All Employees",
           "Add Employee",
@@ -24,14 +24,8 @@ function questionList() {
           "Add Role",
           "View All Departments",
           "Add Department",
-          "Update Employee Managers",
-          "View Employees by Manager",
-          "View Employees by Department",
-          "Delete Department",
-          "Delete Role",
-          "Delete Employee",
-          "View Total Budget",
-          "Quit\n\n",
+
+          "Quit",
         ],
       },
     ])
@@ -39,9 +33,8 @@ function questionList() {
       const choice = response.mainQuestion;
       console.log(choice);
       switch (choice) {
-        case "View All Employees":
-          console.log("You chose to view all Employees.");
-          getEmployeeList().then(() => {
+        case "View All Employees": //completed and working
+          viewEmployees().then(() => {
             questionList();
           });
           break;
@@ -57,8 +50,7 @@ function questionList() {
             questionList();
           });
           break;
-        case "View All Roles":
-          console.log("You chose to view all roles.");
+        case "View All Roles": //completed and working
           viewRoles().then(() => {
             questionList();
           });
@@ -69,57 +61,13 @@ function questionList() {
             questionList();
           });
           break;
-        case "View All Departments":
-          console.log("You chose to view all departments.");
+        case "View All Departments": //completed and working
           viewDepartments().then(() => {
             questionList();
           });
           break;
         case "Add Department":
-          console.log("You chose to add a department.");
           addDepartment().then(() => {
-            questionList();
-          });
-          break;
-        case "Update Employee Managers":
-          console.log("You chose to update employee manager.");
-          updateEmployeeManager().then(() => {
-            questionList();
-          });
-          break;
-        case "View Employees by Manager":
-          console.log("You chose to view employees by manager.");
-          viewEmployeeByManager().then(() => {
-            questionList();
-          });
-          break;
-        case "View Employees by Department":
-          console.log("You chose to view employees by department.");
-          viewEmployeeByDepartment().then(() => {
-            questionList();
-          });
-          break;
-        case "Delete Department":
-          console.log("You chose to delete a department.");
-          deleteDepartment().then(() => {
-            questionList();
-          });
-          break;
-        case "Delete Role":
-          console.log("You chose to delete a role.");
-          deleteRole().then(() => {
-            questionList();
-          });
-          break;
-        case "Delete Employee":
-          console.log("You chose to delete an employee.");
-          deleteEmployee().then(() => {
-            questionList();
-          });
-          break;
-        case "View Total Budget":
-          console.log("You chose to view the budget.");
-          viewBudget().then(() => {
             questionList();
           });
           break;
@@ -132,22 +80,11 @@ function questionList() {
     });
 }
 
-//functions that will return tables of info and will not require user input
-//  **working**
-function getEmployeeList() {
-  let empList = `SELECT id AS employee_id, CONCAT(first_name, ' ', last_name) AS name FROM employee`;
+//when the user chooses to view a list of employees
+function viewEmployees() {
+  let employee_list = `SELECT id AS 'employee id', CONCAT(first_name, ' ', last_name) AS 'employee name' FROM employee;`;
   return new Promise((resolve) => {
-    db.query(empList, (err, result) => {
-      console.table("\n\n", result, "\n\n");
-      resolve(questionList);
-    });
-  });
-}
-
-function viewRoles() {
-  let roleList = `SELECT title, salary FROM role`;
-  return new Promise((resolve) => {
-    db.query(roleList, (err, result) => {
+    db.query(employee_list, (err, result) => {
       console.table("\n\n", result, "\n\n");
       resolve(questionList);
     });
@@ -155,45 +92,252 @@ function viewRoles() {
 }
 
 function viewDepartments() {
-  let depList = `SELECT id AS department_id, name FROM department`;
+  let department_list = `SELECT id AS dept, name AS department_name FROM department`;
   return new Promise((resolve) => {
-    db.query(depList, (err, result) => {
+    db.query(department_list, (err, result) => {
       console.table("\n\n", result, "\n\n");
       resolve(questionList);
     });
   });
 }
 
-//functions that will return tables of info based on certain criteria
+function viewRoles() {
+  let role_list = `SELECT title, salary FROM role`;
+  return new Promise((resolve) => {
+    db.query(role_list, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
 
-function viewEmployeeByManager() {}
+function addRole() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the name of the new role? \n",
+        },
+        {
+          type: "input",
+          name: "salary",
+          message: "What is the salary of this position? \n",
+        },
+        {
+          type: "list",
+          name: "department",
+          message: "What department does this position belong to? \n",
+          choices: getDepartmentList(),
+        },
+        {
+          type: "list",
+          name: "is_manager",
+          message: "Is this position a manager? \n",
+          choices: ["yes", "no"],
+        },
+      ])
+      .then((response) => {
+        let dep;
+        let sql1 = `SELECT id AS id FROM department WHERE name = '${response.department}'`;
+        console.log(sql1);
+        db.query(sql1, (err, result) => {
+          console.log(result[0].id);
+          dep = result[0].id;
+          let yesManager;
+          if (response.is_manager === "yes") {
+            yesManager = 1;
+          } else {
+            yesManager = 0;
+          }
 
-function viewEmployeeByDepartment() {}
+          let sql = `INSERT INTO role (title, salary, department_id, is_manager) VALUES (?,?,?,?)`;
+          let params = [response.title, response.salary, dep, yesManager];
+          console.log(params);
+          db.query(sql, params, (err, result) => {
+            console.log(
+              `You have added ${response.title} to the database.\n\n`
+            );
+            resolve(questionList);
+          });
+        });
+      });
+  });
+}
 
-//functions that add new employees, roles, departments
+function getDepartmentList() {
+  //count the number of departments
+  let deptNum;
+  const deptList = `SELECT COUNT(*) AS total FROM department`;
+  db.query(deptList, (err, result) => {
+    deptNum = result[0].total;
+  });
+  //create an empty list
+  let deptListNames = [];
+  //use a loop to iterate through each department and add it to a list
 
-function addEmployee() {}
+  db.query(`SELECT name AS dept FROM department`, (err, result) => {
+    for (let i = 0; i < deptNum; i++) {
+      deptListNames.push(result[i].dept);
+    }
+  });
+  return deptListNames;
+}
 
-function addRole() {}
+function getRoleList() {
+  //count the number of departments
+  let roleNum;
+  const roleList = `SELECT COUNT(*) AS total FROM role`;
+  db.query(roleList, (err, result) => {
+    roleNum = result[0].total;
+  });
+  //create an empty list
+  let roleListNames = [];
+  //use a loop to iterate through each department and add it to a list
 
-function addDepartment() {}
+  db.query(`SELECT title AS role FROM role`, (err, result) => {
+    for (let i = 0; i < roleNum; i++) {
+      roleListNames.push(result[i].role);
+    }
+  });
+  return roleListNames;
+}
 
-//functions that update information
+function addDepartment() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the name of the new department? \n",
+        },
+      ])
 
-function updateRole() {}
+      .then((response) => {
+        let newDept = response.title;
+        console.log(newDept);
+        let sqldep = `INSERT INTO department (name) VALUES (?)`;
+        db.query(sqldep, [newDept], (err, result) => {
+          console.log(`You have added ${response.title} to the database.\n\n`);
+          resolve(questionList);
+        });
+      });
+  });
+}
 
-function updateEmployeeManager() {}
+function getManagerList() {
+  let num;
+  db.query(
+    `SELECT COUNT(*) AS total FROM employee LEFT JOIN role ON employee.role_id=role.id WHERE role.is_manager=1;`,
+    (err, result) => {
+      num = result[0].total;
+    }
+  );
+  let manListNames = [];
+  const isManagerTrue = `SELECT CONCAT(first_name, ' ', last_name) AS name, role_id FROM employee LEFT JOIN role ON employee.role_id=role.id WHERE role.is_manager=1`;
+  db.query(isManagerTrue, (err, result) => {
+    for (let z = 0; z < num; z++) {
+      manListNames.push(result[z].name);
+    }
+  });
+  return manListNames;
+}
 
-//functions that delete info
+function addEmployee() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "newFirstName",
+          message: "What is the employee's first name?",
+        },
+        {
+          type: "input",
+          name: "newLastName",
+          message: "What is the employee's last name?",
+        },
+        {
+          type: "list",
+          name: "newRole",
+          message: "What is the employee's role?",
+          choices: getRoleList(),
+        },
+        {
+          type: "list",
+          name: "newSupervisor",
+          message: "Who is the employee's manager?",
+          choices: getManagerList(),
+        },
+      ])
+      .then((response) => {
+        const empRole = `SELECT id AS id FROM role WHERE title='${response.newRole}'`;
+        db.query(empRole, (err, result) => {
+          const newEmpRole = result[0].id;
+          const manName = `SELECT id AS id FROM employee WHERE CONCAT(first_name, ' ', last_name)='${response.newSupervisor}'`;
+          db.query(manName, (err, result) => {
+            const newManName = result[0].id;
+            const insertEmp = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)`;
+            const empParams = [
+              response.newFirstName,
+              response.newLastName,
+              newEmpRole,
+              newManName,
+            ];
+            db.query(insertEmp, empParams, (err, result) => {
+              console.log(
+                `You have added ${response.newFirstName} ${response.newLastName} to the database.\n\n`
+              );
+              resolve(questionList);
+            });
+          });
+        });
+      });
+  });
+}
 
-function deleteEmployee() {}
+function getEmployeeList() {
+  return new Promise((resolve) => {
+    let employeeNum;
+    const employeeList = `SELECT COUNT(*) AS total FROM employee`;
+    db.query(employeeList, (err, result) => {
+      employeeNum = result[0].total;
+    });
+    //create an empty list
+    let employeeListNames = [];
+    //use a loop to iterate through each department and add it to a list
 
-function deleteRole() {}
+    db.query(
+      `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employee`,
+      (err, result) => {
+        for (let e = 0; e < employeeNum; e++) {
+          employeeListNames.push(result[e].name);
+        }
+        console.log(employeeListNames);
+        return employeeListNames;
+      }
+    );
+  });
+}
 
-function deleteDepartment() {}
-
-//functions that calculate
-
-function viewBudget() {}
+function updateRole() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "employee",
+          message: "Select the employee name you would like to update. \n",
+          choices: getEmployeeList(),
+        },
+      ])
+      .then((response) => {
+        console.log(response.employee);
+      });
+    resolve(questionList);
+  });
+}
 
 questionList();
