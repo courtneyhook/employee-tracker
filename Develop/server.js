@@ -133,11 +133,36 @@ function questionList() {
 }
 
 //functions that will return tables of info and will not require user input
-function getEmployeeList() {}
+//  **working**
+function getEmployeeList() {
+  let empList = `SELECT id AS employee_id, CONCAT(first_name, ' ', last_name) AS name FROM employee`;
+  return new Promise((resolve) => {
+    db.query(empList, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
 
-function viewRoles() {}
+function viewRoles() {
+  let roleList = `SELECT title, salary FROM role`;
+  return new Promise((resolve) => {
+    db.query(roleList, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
 
-function viewDepartments() {}
+function viewDepartments() {
+  let depList = `SELECT id AS department_id, name FROM department`;
+  return new Promise((resolve) => {
+    db.query(depList, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
 
 //functions that will return tables of info based on certain criteria
 
