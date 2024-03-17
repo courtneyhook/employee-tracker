@@ -5,7 +5,7 @@ const cTable = require("console.table");
 const db = mysql.createConnection({
   host: "localHost",
   user: "root",
-  password: "Jasmine07!",
+  password: "bootcamp",
   database: "company_db",
 });
 
@@ -24,7 +24,6 @@ function questionList() {
           "Add Role",
           "View All Departments",
           "Add Department",
-
           "Quit",
         ],
       },
@@ -44,12 +43,14 @@ function questionList() {
             questionList();
           });
           break;
+
         case "Update Employee Role":
           console.log("You chose to update employee role.");
           updateRole().then(() => {
             questionList();
           });
           break;
+
         case "View All Roles": //completed and working
           viewRoles().then(() => {
             questionList();
@@ -80,11 +81,21 @@ function questionList() {
     });
 }
 
-//when the user chooses to view a list of employees
+//functions that will display information without user input
 function viewEmployees() {
   let employee_list = `SELECT id AS 'employee id', CONCAT(first_name, ' ', last_name) AS 'employee name' FROM employee;`;
   return new Promise((resolve) => {
     db.query(employee_list, (err, result) => {
+      console.table("\n\n", result, "\n\n");
+      resolve(questionList);
+    });
+  });
+}
+
+function viewRoles() {
+  let role_list = `SELECT title, salary FROM role`;
+  return new Promise((resolve) => {
+    db.query(role_list, (err, result) => {
       console.table("\n\n", result, "\n\n");
       resolve(questionList);
     });
@@ -101,13 +112,57 @@ function viewDepartments() {
   });
 }
 
-function viewRoles() {
-  let role_list = `SELECT title, salary FROM role`;
+//functions that will add employees, roles, or departments
+function addEmployee() {
   return new Promise((resolve) => {
-    db.query(role_list, (err, result) => {
-      console.table("\n\n", result, "\n\n");
-      resolve(questionList);
-    });
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "newFirstName",
+          message: "What is the employee's first name?",
+        },
+        {
+          type: "input",
+          name: "newLastName",
+          message: "What is the employee's last name?",
+        },
+        {
+          type: "list",
+          name: "newRole",
+          message: "What is the employee's role?",
+          choices: getRoleList(),
+        },
+        {
+          type: "list",
+          name: "newSupervisor",
+          message: "Who is the employee's manager?",
+          choices: getManagerList(),
+        },
+      ])
+      .then((response) => {
+        const empRole = `SELECT id AS id FROM role WHERE title='${response.newRole}'`;
+        db.query(empRole, (err, result) => {
+          const newEmpRole = result[0].id;
+          const manName = `SELECT id AS id FROM employee WHERE CONCAT(first_name, ' ', last_name)='${response.newSupervisor}'`;
+          db.query(manName, (err, result) => {
+            const newManName = result[0].id;
+            const insertEmp = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)`;
+            const empParams = [
+              response.newFirstName,
+              response.newLastName,
+              newEmpRole,
+              newManName,
+            ];
+            db.query(insertEmp, empParams, (err, result) => {
+              console.log(
+                `You have added ${response.newFirstName} ${response.newLastName} to the database.\n\n`
+              );
+              resolve(questionList);
+            });
+          });
+        });
+      });
   });
 }
 
@@ -166,6 +221,52 @@ function addRole() {
   });
 }
 
+function addDepartment() {
+  return new Promise((resolve) => {
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          name: "title",
+          message: "What is the name of the new department? \n",
+        },
+      ])
+
+      .then((response) => {
+        let newDept = response.title;
+        console.log(newDept);
+        let sqldep = `INSERT INTO department (name) VALUES (?)`;
+        db.query(sqldep, [newDept], (err, result) => {
+          console.log(`You have added ${response.title} to the database.\n\n`);
+          resolve(questionList);
+        });
+      });
+  });
+}
+
+//functions that will update information
+function updateRole() {
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        name: "employeeName",
+        message: "Select the employee you wish to update.",
+        choices: getEmployeeList(),
+      },
+      {
+        type: "list",
+        name: "newRole",
+        message: "Select the new role of the employee.",
+        choices: getRoleList(),
+      },
+    ])
+    .then((response) => {
+      console.log(response.employeeName);
+      console.log(response.newRole);
+    });
+}
+//helper functions
 function getDepartmentList() {
   //count the number of departments
   let deptNum;
@@ -204,29 +305,6 @@ function getRoleList() {
   return roleListNames;
 }
 
-function addDepartment() {
-  return new Promise((resolve) => {
-    inquirer
-      .prompt([
-        {
-          type: "input",
-          name: "title",
-          message: "What is the name of the new department? \n",
-        },
-      ])
-
-      .then((response) => {
-        let newDept = response.title;
-        console.log(newDept);
-        let sqldep = `INSERT INTO department (name) VALUES (?)`;
-        db.query(sqldep, [newDept], (err, result) => {
-          console.log(`You have added ${response.title} to the database.\n\n`);
-          resolve(questionList);
-        });
-      });
-  });
-}
-
 function getManagerList() {
   let num;
   db.query(
@@ -245,99 +323,24 @@ function getManagerList() {
   return manListNames;
 }
 
-function addEmployee() {
-  return new Promise((resolve) => {
-    inquirer
-      .prompt([
-        {
-          type: "input",
-          name: "newFirstName",
-          message: "What is the employee's first name?",
-        },
-        {
-          type: "input",
-          name: "newLastName",
-          message: "What is the employee's last name?",
-        },
-        {
-          type: "list",
-          name: "newRole",
-          message: "What is the employee's role?",
-          choices: getRoleList(),
-        },
-        {
-          type: "list",
-          name: "newSupervisor",
-          message: "Who is the employee's manager?",
-          choices: getManagerList(),
-        },
-      ])
-      .then((response) => {
-        const empRole = `SELECT id AS id FROM role WHERE title='${response.newRole}'`;
-        db.query(empRole, (err, result) => {
-          const newEmpRole = result[0].id;
-          const manName = `SELECT id AS id FROM employee WHERE CONCAT(first_name, ' ', last_name)='${response.newSupervisor}'`;
-          db.query(manName, (err, result) => {
-            const newManName = result[0].id;
-            const insertEmp = `INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?,?,?,?)`;
-            const empParams = [
-              response.newFirstName,
-              response.newLastName,
-              newEmpRole,
-              newManName,
-            ];
-            db.query(insertEmp, empParams, (err, result) => {
-              console.log(
-                `You have added ${response.newFirstName} ${response.newLastName} to the database.\n\n`
-              );
-              resolve(questionList);
-            });
-          });
-        });
-      });
-  });
-}
-
 function getEmployeeList() {
-  return new Promise((resolve) => {
-    let employeeNum;
-    const employeeList = `SELECT COUNT(*) AS total FROM employee`;
-    db.query(employeeList, (err, result) => {
-      employeeNum = result[0].total;
-    });
-    //create an empty list
-    let employeeListNames = [];
-    //use a loop to iterate through each department and add it to a list
-
-    db.query(
-      `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employee`,
-      (err, result) => {
-        for (let e = 0; e < employeeNum; e++) {
-          employeeListNames.push(result[e].name);
-        }
-        console.log(employeeListNames);
-        return employeeListNames;
+  let employeeNum;
+  const employeeList = `SELECT COUNT(*) AS total FROM employee`;
+  db.query(employeeList, (err, result) => {
+    employeeNum = result[0].total;
+  });
+  //create an empty list
+  let employeeListNames = [];
+  //use a loop to iterate through each department and add it to a list
+  db.query(
+    `SELECT CONCAT(first_name, ' ', last_name) AS name FROM employee`,
+    (err, result) => {
+      for (let e = 0; e < employeeNum; e++) {
+        employeeListNames.push(result[e].name);
       }
-    );
-  });
-}
-
-function updateRole() {
-  return new Promise((resolve) => {
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "employee",
-          message: "Select the employee name you would like to update. \n",
-          choices: getEmployeeList(),
-        },
-      ])
-      .then((response) => {
-        console.log(response.employee);
-      });
-    resolve(questionList);
-  });
+    }
+  );
+  return employeeListNames;
 }
 
 questionList();
